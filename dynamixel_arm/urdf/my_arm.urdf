@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <robot name="my_arm" xmlns:xacro="http://ros.org/wiki/xacro">
-  <include filename="$(find dynamixel_arm)/urdf/ax-12a.urdf.xacro"/>
+
   <material name="blue">
     <color rgba="0 0 0.8 1"/>
   </material>
@@ -13,19 +13,49 @@
     <color rgba="1 1 1 1"/>
   </material>
 
+  <xacro:macro name="ax12a" params="prefix parent_link">
+    <link name="${prefix}_link">
+      <visual>
+        <origin rpy="0 0 0" xyz="0 0 0"/>
+        <geometry>
+          <mesh filename="package://dynamixel_arm/urdf/meshes/ax12_box.stl" scale="0.001 0.001 0.001"/>
+        </geometry>
+        <material name="blue"/>
+      </visual>
+      <collision>
+        <geometry>
+          <mesh filename="package://dynamixel_arm/urdf/meshes/ax12_box.stl" scale="0.001 0.001 0.001"/>
+        </geometry>
+        <origin rpy="0 0 0" xyz="0 0 0"/>
+      </collision>
+      <inertia>
+        <mass value="0.0546"/>
+        <inertia ixx="1.0" ixy="0.0" ixz="0.0" iyy="1.0" iyz="0.0" izz="1.0"/>
+      </inertia>
+    </link>
+    <joint name="${prefix}_joint" type="revolute">
+      <axis xyz="0 0 1"/>
+      <limit effort="1000.0" lower="-2.6"  upper="2.6" velocity="1.0"/>
+      <origin rpy="0 0 0" xyz="0 0 0.0385"/>
+      <parent link="${parent_link}"/>
+      <child link="pan_link"/>
+    </joint> 
+  </xacro:macro>
+  
+
 
   <link name="arm_base">
     <visual>
-      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <origin rpy="3.14 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://dynamixel_arm/urdf/meshes/F3.stl"/>
+        <mesh filename="package://dynamixel_arm/urdf/meshes/F3.stl" scale="0.001 0.001 0.001"/>
       </geometry>
     </visual>
     <collision>
       <geometry>
-        <mesh filename="package://dynamixel_arm/urdf/meshes/F3.stl"/>
+        <mesh filename="package://dynamixel_arm/urdf/meshes/F3.stl" scale="0.001 0.001 0.001"/>
       </geometry>
-      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <origin rpy="3.14 0 0" xyz="0 0 0"/>
     </collision>
    <inertia>
      <mass value="0.0546"/>

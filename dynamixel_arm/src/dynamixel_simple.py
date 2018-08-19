@@ -96,26 +96,44 @@ class IK(object):
 		ans_1 = self._check_bound(ans_1)
 		ans_2 = self._check_bound(ans_2)
 		
+		# Only one solution
+		if ans_1 == None:
+			self.nearest = ans_2
+		elif ans_2 == None:
+			self.nearest = ans_1
+		# No solution
+		elif ans_1 == None and ans_2 == None:
+			self.nearest = None
+			rospy.loginfo("Given position not reachable")
+			rospy.signal_shutdown("Failed")
+		# Two solutions
 		# Find nearest solution
 		# In L2 distance of joint space
-		dis_1 = (ans_1[0]- self.arm_pos[0])**2 + (ans_1[1] - self.arm_pos[1]) ** 2
-		dis_2 = (ans_2[0]- self.arm_pos[0])**2 + (ans_2[1] - self.arm_pos[1]) ** 2
-		if dis_1 < dis_2:
-			self.nearest = ans_1
 		else:
-			self.nearest = ans_2
+			dis_1 = (ans_1[0]- self.arm_pos[0])**2 + (ans_1[1] - self.arm_pos[1]) ** 2
+			dis_2 = (ans_2[0]- self.arm_pos[0])**2 + (ans_2[1] - self.arm_pos[1]) ** 2
+			if dis_1 < dis_2:
+				self.nearest = ans_1
+			else:
+				self.nearest = ans_2
 		
 		self.nearest[0] = float(format(self.nearest[0], '.3f'))
 		self.nearest[1] = float(format(self.nearest[1], '.3f'))
 		rospy.loginfo("[%s] Solution: %s" %(self.node_name, self.nearest))
 		
-	# joint should be in [-pi, pi]
+	# joint 1 should be in [-2.9, 3]
+	# joint 2 should be in [-2, 2]
 	def _check_bound(self, ans):
+		# Change to [-pi, pi] branch
 		for i in range(0, len(ans)):
 			if ans[i] > pi:
 				ans[i] = 2* pi - ans[i]
 			if ans[i] < -pi:
 				ans[i] = 2* pi + ans[i]
+		if ans[0] > 3 or ans[0] < -2.9:
+			ans = None
+		if ans[1] > 2 or ans[1] < -2:
+			ans = None
 		return ans
 
 if __name__ == "__main__":
@@ -126,6 +144,9 @@ if __name__ == "__main__":
 	rospy.init_node("arm_IK", disable_signals = True)
 	x = float(sys.argv[1])
 	z = float(sys.argv[2])
+	if z < 0:
+		print "Please give z greater than 0"
+		sys.exit(0)
 	gripper_command = str(sys.argv[3])
 	obj = IK(x , z, gripper_command)
 	rospy.spin()
