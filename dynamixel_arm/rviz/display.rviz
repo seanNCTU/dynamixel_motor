@@ -8,6 +8,9 @@ Panels:
         - /Status1
         - /Grid1
         - /RobotModel1
+        - /RobotModel1/Links1
+        - /TF1
+        - /TF1/Frames1
       Splitter Ratio: 0.5
     Tree Height: 775
   - Class: rviz/Selection
@@ -65,7 +68,47 @@ Visualization Manager:
           Show Axes: false
           Show Trail: false
           Value: true
-        pan_link:
+        finger_left:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        finger_right:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        frame_2:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        frame_3_1:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        frame_3_2:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        frame_4:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        gripper_base:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        gripper_motor:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        tilt_motor:
           Alpha: 1
           Show Axes: false
           Show Trail: false
@@ -80,11 +123,27 @@ Visualization Manager:
       Enabled: true
       Frame Timeout: 15
       Frames:
-        All Enabled: true
+        All Enabled: false
         arm_base:
           Value: true
-        pan_link:
-          Value: true
+        finger_left:
+          Value: false
+        finger_right:
+          Value: false
+        frame_2:
+          Value: false
+        frame_3_1:
+          Value: false
+        frame_3_2:
+          Value: false
+        frame_4:
+          Value: false
+        gripper_base:
+          Value: false
+        gripper_motor:
+          Value: false
+        tilt_motor:
+          Value: false
       Marker Scale: 1
       Name: TF
       Show Arrows: true
@@ -92,8 +151,17 @@ Visualization Manager:
       Show Names: true
       Tree:
         arm_base:
-          pan_link:
-            {}
+          frame_4:
+            frame_3_1:
+              tilt_motor:
+                frame_2:
+                  frame_3_2:
+                    gripper_motor:
+                      gripper_base:
+                        finger_left:
+                          {}
+                        finger_right:
+                          {}
       Update Interval: 0
       Value: true
   Enabled: true
@@ -121,7 +189,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 0.292470276
+      Distance: 0.86733669
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.0599999987
         Stereo Focal Distance: 1
@@ -136,10 +204,10 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.00999999978
-      Pitch: 0.395397872
+      Pitch: 0.820397139
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 3.65540719
+      Yaw: 4.75043631
     Saved: ~
 Window Geometry:
   Displays:
