@@ -10,12 +10,12 @@ from std_msgs.msg import Float64
 a1 = 0.09 # joint1 to joint2
 a2 = 0.07 # joint2 to motor3
 H = 0.04 # base to joint1
-L = 0.06 # motor3 to TCP
+L = 0.056 # motor3 to TCP
 
 def position2rad(pos):
 	pos_rad = [None, None]
 	for i in range(0, len(pos)):
-		pos_rad[i] = -pi + 2* pi / 1024 * pos[i]
+		pos_rad[i] = -5*pi/6 + float(pos[i]) / 1024 * 5*pi/3
 	return pos_rad
 
 class IK(object):
@@ -121,20 +121,19 @@ class IK(object):
 		self.nearest[1] = float(format(self.nearest[1], '.3f'))
 		rospy.loginfo("[%s] Solution: %s" %(self.node_name, self.nearest))
 		
-	# joint 1 should be in [-2.9, 3]
-	# joint 2 should be in [-2, 2]
+	# joint 1 should be in [-2.617, 2.617]
+	# joint 2 should be in [-1.78, 1.68]
 	def _check_bound(self, ans):
+		ans_ = ans
 		# Change to [-pi, pi] branch
 		for i in range(0, len(ans)):
 			if ans[i] > pi:
-				ans[i] = 2* pi - ans[i]
+				ans_[i] = 2* pi - ans[i]
 			if ans[i] < -pi:
-				ans[i] = 2* pi + ans[i]
-		if ans[0] > 3 or ans[0] < -2.9:
-			ans = None
-		if ans[1] > 2 or ans[1] < -2:
-			ans = None
-		return ans
+				ans_[i] = 2* pi + ans[i]
+		if ans[0] > 2.617 or ans[0] < -2.617 or ans[1] > 1.68 or ans[1] < -1.78:
+			ans_ = None
+		return ans_
 
 if __name__ == "__main__":
 	if len(sys.argv) != 4:
