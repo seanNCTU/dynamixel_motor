@@ -65,7 +65,7 @@
   <joint name="pan_joint" type="revolute">
     <axis xyz="0 1 0"/>
     <origin rpy="0 0 0" xyz="0 0 0.0385"/>
-    <limit effort="1000.0" upper="3" lower="-2.9" velocity="1.0"/>
+    <limit effort="1000.0" upper="2.617" lower="-2.617" velocity="1.0"/>
     <parent link="arm_base"/>
     <child link="frame_4"/>
   </joint>
@@ -117,7 +117,7 @@
   <joint name="tilt_joint" type="revolute">
     <axis xyz="0 1 0"/>
     <origin rpy="0 0 0" xyz="0 0 0.002"/>
-    <limit effort="1000.0" upper="2" lower="-2" velocity="1.0"/>
+    <limit effort="1000.0" upper="1.68" lower="-1.78" velocity="1.0"/>
     <parent link="frame_3_1"/>
     <child link="tilt_motor"/>
   </joint>
@@ -272,4 +272,12 @@
     <child link="finger_right"/>
   </joint>
   <!-- end Finger right --> 
+  <!-- TCP -->
+  <link name="tcp">
+  </link>
+  <joint name="base_to_tcp" type="fixed">
+    <origin rpy="0 0 0" xyz="0.04 0 0"/>
+    <parent link="gripper_base"/>
+    <child link="tcp"/>
+  </joint>
 </robot>
