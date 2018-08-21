@@ -4,17 +4,21 @@ import sys
 import numpy as np
 
 from math import pi, atan2, asin, sqrt, sin, cos
+
+
 from dynamixel_msgs.msg import MotorStateList
-from std_msgs.msg import Float64
+from std_msgs.msg import Float64, ColorRGBA
+from geometry_msgs.msg import Vector3, Pose, Point
+from visualization_msgs.msg import Marker
 
 # arm dimension
 a1 = 0.09 # joint1 to joint2
 a2 = 0.07 # joint2 to motor3
 H = 0.04 # base to joint1
-L = 0.06 # motor3 to TCP
+L = 0.056 # motor3 to TCP
 
 # RRT parameters
-epsilon   = 0.04 # Each distance from last node to next node
+epsilon   = 0.04 # Distance from last node to next node
 tolerance = 5e-3 # Distance tolerance to goal 
 X_DIM = 0.18
 Z_DIM = 0.22
@@ -22,7 +26,7 @@ Z_DIM = 0.22
 def position2rad(pos):
 	pos_rad = [None, None]
 	for i in range(0, len(pos)):
-		pos_rad[i] = -pi + 2* pi / 1024 * pos[i]
+		pos_rad[i] = -5*pi/6 + float(pos[i]) / 1024 * 5*pi/3
 	return pos_rad
 
 class AvoidObstacle(object):
@@ -30,26 +34,53 @@ class AvoidObstacle(object):
 		self.node_name = rospy.get_name()
 		# Motor angles, in rad
 		self.arm_pos = None
-		self.initial_pos = None
 		# Target position
 		self.q_goal = np.array([x, z])
 		# Publishers and subscribers
 		self.pub_pan = rospy.Publisher("/pan_controller/command", Float64, queue_size = 1)
 		self.pub_tilt = rospy.Publisher("/tilt_controller/command", Float64, queue_size = 1)
 		self.pub_gripper = rospy.Publisher("/gripper_controller/command", Float64, queue_size = 1)
+		self.pub_obstacle = rospy.Publisher("/visualization/obstacle", Marker, queue_size = 1)
+		self.pub_q_list = rospy.Publisher("/visualization/q_list", Marker, queue_size = 10)
 		self.sub_pos = rospy.Subscriber("/motor_states/pan_tilt_port", MotorStateList, self.cb_pos, queue_size = 10)
 		
 		# Obstacle, a line segment
 		self.p1 = np.array([0.0685, 0.1465])
 		self.p2 = np.array([0.105, 0.148])
-		self.obstacle = np.array([self.p1, self.p2])
+		
+		rospy.Timer(rospy.Duration(0.1), self.timer_cb)
 		# RRT node
 		self.q_size = 1
 		self.q_list = None
 		self.q_near = None
 		self.waypoint = None
 		self.waypoint_size = 1
-	
+		# Maker sure target reachability
+		try:
+			input_error = self._rrt_reachable(x, z)
+			if input_error == 0:
+				rospy.loginfo("Input target not reachable")
+				rospy.signal_shutdown("Error input")
+		except ValueError:
+			rospy.loginfo("Input target not reachable")
+			rospy.signal_shutdown("Error input")
+		
+	def timer_cb(self, event):
+		obstacle = Marker()
+		obstacle.header.frame_id = "arm_base"
+		obstacle.header.stamp = rospy.Time.now()
+		obstacle.type = Marker.LINE_LIST
+		obstacle.action = Marker.ADD
+		obstacle.pose = Pose()
+		obstacle.pose.orientation.w = 1.0
+		obstacle.scale = Vector3(0.005, 0.005, 0.005)
+		obstacle.color = ColorRGBA(0, 0, 1, 0.5)
+		obstacle.points.append(Point(0.0685, 0, 0.1465))
+		obstacle.points.append(Point(0.105, 0, 0.148))
+		obstacle.colors.append(ColorRGBA(0, 0, 1, 0.5))
+		self.pub_obstacle.publish(obstacle)
+		self.pub_obstacle.publish(obstacle)
+
 	def cb_pos(self, msg):
 		self.arm_pos = position2rad([msg.motor_states[0].position, msg.motor_states[1].position])
 		self._FK()
@@ -63,7 +94,12 @@ class AvoidObstacle(object):
 			       	       np.random.random()* Z_DIM]
 			self.q_near, index = self._rrt_near()
 			self._rrt_check()
-			if(self._rrt_is_hit_obstacle(self.q_list[index], self.q_near) == 0): # Not hit constrain
+			try:
+				near_reachable = self._rrt_reachable(self.q_near[0], self.q_near[1])
+			except ValueError: # near not reachable, ignore
+				pass
+			if(self._rrt_is_hit_obstacle(self.q_list[index], self.q_near) == 0 \
+			   and near_reachable == 1): # Not hit constrain
 				self.q_list = np.append(self.q_list, [[0, 0, 0]], axis = 0)
 				self.q_list[self.q_size][0:2] = self.q_near
 				self.q_list[self.q_size][2] = int(index+1)
@@ -137,7 +173,30 @@ class AvoidObstacle(object):
 			return 1
 		else:
 			return 0 
+
+	def _rrt_reachable(self, x, z):
+		theta = atan2(z-H, x)
+		k = x**2 + (z-H)**2 + a1**2 - a2**2 - L**2
+		theta_1_1 = asin(k/(2*a1*sqrt(x**2 + (z-H)**2))) - theta
+		theta_1_2 = pi - asin(k/(2*a1*sqrt(x**2 + (z-H)**2))) - theta
+		x_bar_1 = x - a1* sin(theta_1_1)
+		z_bar_1 = (z-H) - a1 * cos(theta_1_1)
+		x_bar_2 = x - a1* sin(theta_1_2)
+		z_bar_2 = (z-H) - a1 * cos(theta_1_2)
+		theta_2_1 = atan2((a2*x_bar_1 - L* z_bar_1), (a2*z_bar_1 + L*x_bar_1)) - theta_1_1
+		theta_2_2 = atan2((a2*x_bar_2 - L* z_bar_2), (a2*z_bar_2 + L*x_bar_2)) - theta_1_2
+		ans_1 = [theta_1_1, theta_2_1]
+		ans_2 = [theta_1_2, theta_2_2]
+		
+		ans_1 = self._check_bound(ans_1)
+		ans_2 = self._check_bound(ans_2)
+		if ans_1 == None and ans_2 == None:
+			return 0
+		else:
+			return 1
+
 	# end RRT related
+	# kinematic related
 	def _FK(self):
 		s1 = sin(self.arm_pos[0])
 		c1 = cos(self.arm_pos[0])
@@ -145,14 +204,10 @@ class AvoidObstacle(object):
 		c12 = cos(self.arm_pos[0] + self.arm_pos[1])
 		ini_x = a1 * s1 + a2 * s12 + L * c12
 		ini_z = a1 * c1 + a2 * c12 - L * s12 + H
-		self.initial_pos = [ini_x, ini_z]
 		self.q_list = np.array([[ini_x, ini_z, 1]])
 		self.q_near = np.array([ini_x, ini_z])
-		#rospy.loginfo("[%s] Initial pose: (%s, %s)", %(self.node_name, ini_x, ini_z))
-		print ini_x, ini_z
 	def _IK(self, x, z):
 
-		
 		theta = atan2(z-H, x)
 		k = x**2 + (z-H)**2 + a1**2 - a2**2 - L**2
 		theta_1_1 = asin(k/(2*a1*sqrt(x**2 + (z-H)**2))) - theta
@@ -201,21 +256,20 @@ class AvoidObstacle(object):
 		rospy.sleep(0.5)
 		rospy.loginfo("[%s] Solution: %s" %(self.node_name, self.nearest))
 		
-	# joint 1 should be in [-2.9, 3]
-	# joint 2 should be in [-2, 2]
+	# joint 1 should be in [-2.617, 2.617]
+	# joint 2 should be in [-1.78, 1.68]
 	def _check_bound(self, ans):
+		ans_ = ans
 		# Change to [-pi, pi] branch
 		for i in range(0, len(ans)):
 			if ans[i] > pi:
-				ans[i] = 2* pi - ans[i]
+				ans_[i] = 2* pi - ans[i]
 			if ans[i] < -pi:
-				ans[i] = 2* pi + ans[i]
-		if ans[0] > 3 or ans[0] < -2.9:
-			ans = None
-		if ans[1] > 2 or ans[1] < -2:
-			ans = None
-		return ans
-
+				ans_[i] = 2* pi + ans[i]
+		if ans_[0] > 2.617 or ans_[0] < -2.617 or ans_[1] > 1.68 or ans_[1] < -1.78:
+			ans_ = None
+		return ans_
+	# end kinematic related
 if __name__ == "__main__":
 
 	if len(sys.argv) != 3:
