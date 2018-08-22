@@ -40,18 +40,7 @@ class IK(object):
 	
 	def cb_pos(self, msg):
 		self.arm_pos = position2rad([msg.motor_states[0].position, msg.motor_states[1].position])
-		for i in range(0, len(msg.motor_states)):
-			# Not test yet
-			if abs(msg.motor_states[i].load) >= 1:
-				data = Float64()
-				rospy.sleep(0.5)
-				self.pub_pan.publish(data)
-				rospy.sleep(0.5)
-				self.pub.tilt(data)
-				rospy.sleep(0.5)
-				self.pub_gripper(data)
-				rospy.loginfo("[%s] Emergency stop! Go to home.")
-				rospy.signal_shutdown("Enengency stop")
+
 		try:
 			# Process inverse kinematic
 			self._IK()
@@ -121,8 +110,8 @@ class IK(object):
 		self.nearest[1] = float(format(self.nearest[1], '.3f'))
 		rospy.loginfo("[%s] Solution: %s" %(self.node_name, self.nearest))
 		
-	# joint 1 should be in [-2.617, 2.617]
-	# joint 2 should be in [-1.78, 1.68]
+	# joint 1 should be in [-1.743, 1.948]
+	# joint 2 should be in [-1.626, 1.79]
 	def _check_bound(self, ans):
 		ans_ = ans
 		# Change to [-pi, pi] branch
@@ -131,7 +120,7 @@ class IK(object):
 				ans_[i] = 2* pi - ans[i]
 			if ans[i] < -pi:
 				ans_[i] = 2* pi + ans[i]
-		if ans[0] > 2.617 or ans[0] < -2.617 or ans[1] > 1.68 or ans[1] < -1.78:
+		if ans[0] > 1.948 or ans[0] < -1.743 or ans[1] > 1.79 or ans[1] < -1.626:
 			ans_ = None
 		return ans_
 
