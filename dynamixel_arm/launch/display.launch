@@ -12,6 +12,7 @@
   <group unless="$(arg use_sim)">
     <node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher">
       <param name="/use_gui" value="false"/>
+      <rosparam param="/source_list">[/motor_states/joint_state]</rosparam>
     </node>
     <node name="state_remap_node" pkg="dynamixel_arm" type="state_remap.py"/>
   </group>
