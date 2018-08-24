@@ -12,6 +12,7 @@ a2 = 0.07 # joint2 to motor3
 H = 0.04 # base to joint1
 L = 0.056 # motor3 to TCP
 
+# Convert the position from encoder to radian
 def position2rad(pos):
 	pos_rad = [None, None]
 	for i in range(0, len(pos)):
@@ -37,7 +38,7 @@ class IK(object):
 		self.pub_gripper = rospy.Publisher("/gripper_controller/command", Float64, queue_size = 1)
 		self.sub_pos = rospy.Subscriber("/motor_states/pan_tilt_port", MotorStateList, self.cb_pos, queue_size = 10)
 		
-	
+	# callback, get arm pose of the moment
 	def cb_pos(self, msg):
 		self.arm_pos = position2rad([msg.motor_states[0].position, msg.motor_states[1].position])
 
@@ -64,7 +65,7 @@ class IK(object):
 			print e
 			rospy.loginfo("Given position not reachable")
 			rospy.signal_shutdown("Failed")
-
+	# IK process
 	def _IK(self):
 		x = self.x
 		z = self.z
@@ -86,9 +87,9 @@ class IK(object):
 		ans_2 = self._check_bound(ans_2)
 		
 		# Only one solution
-		if ans_1 == None:
+		if ans_1 == None and ans_2 != None:
 			self.nearest = ans_2
-		elif ans_2 == None:
+		elif ans_1 != None and ans_2 == None:
 			self.nearest = ans_1
 		# No solution
 		elif ans_1 == None and ans_2 == None:
@@ -112,6 +113,7 @@ class IK(object):
 		
 	# joint 1 should be in [-1.743, 1.948]
 	# joint 2 should be in [-1.626, 1.79]
+	# Make sure the executable of the answer
 	def _check_bound(self, ans):
 		ans_ = ans
 		# Change to [-pi, pi] branch
@@ -127,7 +129,7 @@ class IK(object):
 if __name__ == "__main__":
 	if len(sys.argv) != 4:
 		print "Not enough arguments!"
-		print "Sample input: rosrun ur_modern_driver dynamixel_arm.py 0.06 0.2 None"
+		print "Sample input: rosrun dynamixel_arm dynamixel_simple.py 0.056 0.2 None"
 		sys.exit(0)
 	rospy.init_node("arm_IK", disable_signals = True)
 	x = float(sys.argv[1])
@@ -136,6 +138,10 @@ if __name__ == "__main__":
 		print "Please give z greater than 0"
 		sys.exit(0)
 	gripper_command = str(sys.argv[3])
+	k = x**2 + (z-H)**2 + a1**2 - a2**2 - L**2
+	if abs(k/(2*a1*sqrt(x**2 + (z-H)**2))) > 1:
+		print "Given position out of workspace"
+		sys.exit(0)
 	obj = IK(x , z, gripper_command)
 	rospy.spin()
 
